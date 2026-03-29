@@ -1,14 +1,24 @@
 <script>
   import Portfolio from './lib/Portfolio.svelte'
   import ApiKeyModal from './lib/ApiKeyModal.svelte'
+  import ImportModal from './lib/ImportModal.svelte'
+  import { loadInvestments } from './lib/store.js'
 
-  let apiKey = $state(localStorage.getItem('csfloat_api_key') || '')
-  let showModal = $state(!apiKey)
+  let apiKey      = $state(localStorage.getItem('csfloat_api_key') || '')
+  let investments = $state(loadInvestments())
+  let showApiKey  = $state(!apiKey)
+  let showImport  = $state(false)
 
   function onKeySet(key) {
     apiKey = key
     localStorage.setItem('csfloat_api_key', key)
-    showModal = false
+    showApiKey = false
+    if (investments.length === 0) showImport = true
+  }
+
+  function onImport(items) {
+    investments = items
+    showImport = false
   }
 </script>
 
@@ -16,31 +26,51 @@
   <header>
     <div class="header-inner">
       <div class="logo">
-        <span class="logo-mark">⬡</span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="none" stroke="#b4783c" stroke-width="1.2"/>
+          <polygon points="12,6 18,9.5 18,16.5 12,20 6,16.5 6,9.5" fill="#8b1428" opacity="0.4"/>
+        </svg>
         <div>
           <h1>GEHENNA<span class="accent">.TRADE</span></h1>
           <p class="tagline">CS2 Investment Intelligence</p>
         </div>
       </div>
-      <button class="btn-ghost" onclick={() => showModal = true}>⚿ API Key</button>
+      <nav>
+        <button class="nav-btn" onclick={() => showImport = true}>⤓ Import</button>
+        <button class="nav-btn" onclick={() => showApiKey = true}>⚿ API Key</button>
+      </nav>
     </div>
   </header>
 
   <main>
-    {#if apiKey}
-      <Portfolio {apiKey} />
-    {:else}
-      <div class="empty-state">
-        <span class="empty-hex">⬡</span>
-        <h2>No API Key Configured</h2>
-        <p>Connect your CSFloat account to track investments.</p>
-        <button class="btn-primary" onclick={() => showModal = true}>Configure API Key</button>
+    {#if investments.length === 0}
+      <div class="landing">
+        <div class="landing-inner">
+          <svg class="landing-hex" width="80" height="80" viewBox="0 0 24 24">
+            <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="none" stroke="#2a1018" stroke-width="0.8"/>
+            <polygon points="12,5 19,8.7 19,16.3 12,20 5,16.3 5,8.7" fill="#1a0810" stroke="#3a1020" stroke-width="0.5"/>
+          </svg>
+          <h2>Track your CS2 investments</h2>
+          <p>Import your trade history from CSFloat to get started.<br/>Steam inventory support is ready for future use.</p>
+          <div class="landing-actions">
+            {#if !apiKey}
+              <button class="btn-primary" onclick={() => showApiKey = true}>Configure API Key</button>
+            {/if}
+            <button class="btn-primary" onclick={() => showImport = true}>⤓ Import Trades</button>
+          </div>
+        </div>
       </div>
+    {:else}
+      <Portfolio {apiKey} bind:investments />
     {/if}
   </main>
 
-  {#if showModal}
-    <ApiKeyModal currentKey={apiKey} onSave={onKeySet} onClose={() => showModal = false} />
+  {#if showApiKey}
+    <ApiKeyModal currentKey={apiKey} onSave={onKeySet} onClose={() => showApiKey = false} />
+  {/if}
+
+  {#if showImport}
+    <ImportModal {apiKey} existing={investments} onImport={onImport} onClose={() => showImport = false} />
   {/if}
 </div>
 
@@ -48,8 +78,8 @@
   :global(*, *::before, *::after) { box-sizing: border-box; margin: 0; padding: 0; }
 
   :global(body) {
-    background: #080508;
-    color: #e8d5c4;
+    background: #11080a;
+    color: #f6e8d8;
     font-family: 'Crimson Pro', 'Palatino Linotype', Georgia, serif;
     min-height: 100vh;
     overflow-x: hidden;
@@ -57,76 +87,65 @@
 
   :global(body::before) {
     content: '';
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background:
-      radial-gradient(ellipse 80% 40% at 50% -5%, rgba(130, 15, 35, 0.2) 0%, transparent 65%),
-      radial-gradient(ellipse 35% 25% at 95% 85%, rgba(70, 15, 90, 0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 80% 40% at 50% -5%, rgba(130,15,35,0.22) 0%, transparent 65%),
+      radial-gradient(ellipse 35% 25% at 95% 85%, rgba(70,15,90,0.14) 0%, transparent 55%),
       repeating-linear-gradient(0deg, transparent, transparent 80px, rgba(130,15,35,0.025) 80px, rgba(130,15,35,0.025) 81px);
-    pointer-events: none;
-    z-index: 0;
   }
 
   .app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
 
   header {
-    border-bottom: 1px solid rgba(180,120,60,0.2);
-    background: rgba(8,5,8,0.92);
-    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(180,120,60,0.3);
+    background: rgba(17,8,10,0.94); backdrop-filter: blur(16px);
     position: sticky; top: 0; z-index: 100;
   }
 
   .header-inner {
-    max-width: 1600px; margin: 0 auto; padding: 0 2rem;
-    height: 60px; display: flex; align-items: center; justify-content: space-between;
+    max-width: 1700px; margin: 0 auto; padding: 0 1.5rem;
+    height: 58px; display: flex; align-items: center; justify-content: space-between;
   }
 
-  .logo { display: flex; align-items: center; gap: 0.8rem; }
-
-  .logo-mark {
-    font-size: 1.5rem; color: #b4783c; line-height: 1;
-    filter: drop-shadow(0 0 10px rgba(180,120,60,0.6));
-  }
+  .logo { display: flex; align-items: center; gap: 0.75rem; }
 
   h1 {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.1rem; font-weight: 700; letter-spacing: 0.18em; color: #e8d5c4; line-height: 1;
+    font-size: 1.05rem; font-weight: 700; letter-spacing: 0.18em; color: #f6e8d8; line-height: 1;
   }
 
   .accent { color: #8b1428; }
 
-  .tagline {
-    font-size: 0.6rem; letter-spacing: 0.22em; color: #6a5a4a;
-    text-transform: uppercase; margin-top: 3px;
+  .tagline { font-size: 0.58rem; letter-spacing: 0.22em; color: #5a4a3a; text-transform: uppercase; margin-top: 3px; }
+
+  nav { display: flex; gap: 0.5rem; }
+
+  .nav-btn {
+    background: transparent; border: 1px solid rgba(180,120,60,0.22); color: #7a5a3a;
+    padding: 0.32rem 0.8rem; font-family: inherit; font-size: 0.78rem;
+    cursor: pointer; letter-spacing: 0.06em; transition: all 0.15s;
   }
+  .nav-btn:hover { border-color: rgba(180,120,60,0.5); color: #b4783c; background: rgba(180,120,60,0.06); }
 
-  .btn-ghost {
-    background: transparent; border: 1px solid rgba(180,120,60,0.28); color: #b4783c;
-    padding: 0.35rem 0.85rem; font-family: inherit; font-size: 0.82rem;
-    cursor: pointer; letter-spacing: 0.06em; transition: all 0.18s;
-  }
-  .btn-ghost:hover { background: rgba(180,120,60,0.08); border-color: rgba(180,120,60,0.55); }
+  main { max-width: 1700px; margin: 0 auto; padding: 1.5rem; flex: 1; width: 100%; }
 
-  main { max-width: 1600px; margin: 0 auto; padding: 2rem; flex: 1; }
+  .landing { display: flex; align-items: center; justify-content: center; min-height: 65vh; }
 
-  .empty-state {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 60vh; gap: 1rem; text-align: center;
-  }
+  .landing-inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; text-align: center; }
 
-  .empty-hex { font-size: 5rem; color: #1e0810; display: block; }
+  .landing-hex { opacity: 0.6; margin-bottom: 0.5rem; }
 
-  .empty-state h2 {
-    font-family: 'Playfair Display', serif; font-size: 1.6rem; color: #c4a882; font-weight: 600;
-  }
+  .landing-inner h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: #c4a882; font-weight: 600; }
 
-  .empty-state p { color: #6a5a4a; font-size: 0.95rem; }
+  .landing-inner p { color: #5a4a3a; font-size: 0.92rem; line-height: 1.7; }
+
+  .landing-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
 
   .btn-primary {
-    background: linear-gradient(135deg, #8b1428 0%, #5e0d1a 100%);
-    border: 1px solid rgba(180,80,80,0.35); color: #f0d8c0;
-    padding: 0.55rem 1.6rem; font-family: inherit; font-size: 0.9rem;
-    cursor: pointer; letter-spacing: 0.1em; transition: all 0.2s; margin-top: 0.5rem;
+    background: linear-gradient(135deg, #8b1428, #5e0d1a);
+    border: 1px solid rgba(180,80,80,0.3); color: #f0d8c0;
+    padding: 0.5rem 1.4rem; font-family: inherit; font-size: 0.88rem;
+    cursor: pointer; letter-spacing: 0.08em; transition: all 0.2s;
   }
-  .btn-primary:hover { background: linear-gradient(135deg, #a0182f 0%, #8b1428 100%); box-shadow: 0 6px 24px rgba(139,20,40,0.45); }
+  .btn-primary:hover { background: linear-gradient(135deg, #a0182f, #8b1428); box-shadow: 0 6px 24px rgba(139,20,40,0.4); }
 </style>
